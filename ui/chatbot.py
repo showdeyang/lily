@@ -10,6 +10,7 @@ from multiprocessing import Pool
 from requests_futures.sessions import FuturesSession
 from concurrent.futures import ThreadPoolExecutor
 import jieba
+from multiprocessing import Pool
 
 
 #session = FuturesSession(executor=ThreadPoolExecutor(max_workers=12))
@@ -37,7 +38,7 @@ def _async_requests(urls):
         List of urls
     """
      
-    session = FuturesSession(max_workers=12)
+    session = FuturesSession(max_workers=50)
     futures = [session.get(url) for url in urls]
     return [future.result() for future in futures]
 
@@ -47,6 +48,33 @@ def lenDiff(query,question):
 def qbadness(query,question):
     badness = len(question) + len(query) - 2*inclusion(query,question)
     return badness
+
+def calFitness(reply,gene=geneMean):
+    query = reply['query']
+    feature = []
+    qbad = qbadness(query,reply['q'])
+    #print(reply['l'])
+    like = int(reply['l'])
+    
+    if len(reply['a']) == 0:
+        alen = 10000
+    else: 
+        alen = 0.01*(len(reply['a'])**2)
+    
+    infodiff = 0 if math.fabs(len(reply['a']) - len(query)) < 10 else math.fabs(len(reply['a']) - len(query)) 
+    ainc = inclusion(reply['a'],query) if inclusion(reply['a'],query) < 10 else 10
+    rtime = reply['t'].split('-')
+    #print(time)
+    try:
+        elapse = int(rtime[0]) + int(rtime[1])/12.0 + int(rtime[2])/366.0 - 2018
+    except ValueError:
+        elapse = 0
+    #print(elapse)
+    feature = [qbad,like,alen,infodiff,ainc,elapse]
+    
+    fitness = np.matmul(gene,feature)
+    return fitness
+
 
 def parallelScrape(queryUrls,questions):
     results = []
@@ -109,7 +137,7 @@ def reply(query, queryUrlPrefix=queryUrlPrefix, geneMean=geneMean):
             for ans in result['a']:
                 
                 ind = result['a'].index(ans)
-                replies.append({'q': result['q'], "a": ans, 't': result['t'][ind], 'l': result['l'][ind]})
+                replies.append({'q': result['q'], 'query': query, "a": ans, 't': result['t'][ind], 'l': result['l'][ind]})
         if replies == []:
             return "聊别的吧..."
         #Now we have replies, map replies to features, and then apply reinforcement learning.
@@ -117,35 +145,41 @@ def reply(query, queryUrlPrefix=queryUrlPrefix, geneMean=geneMean):
         #gene = [np.random.normal(g,0) for g in geneMean]
         gene = geneMean
         # + g*random.random()
-        features=  []
-        fitnesses = [] 
-        for reply in replies:
+        #features=  []
+        #fitnesses = [] 
+        
+        #replies = [(reply, query, gene) for reply in replies]
+        
+        with Pool() as p:
+            fitnesses = p.map(calFitness,replies)        
+        
+#        for reply in replies:
             
-            ind = replies.index(reply)
+            #ind = replies.index(reply)
             #print(ind)
-            feature = []
-            qbad = qbadness(query,reply['q'])
-            #print(reply['l'])
-            like = int(reply['l'])
-            
-            if len(reply['a']) == 0:
-                alen = 10000
-            else: 
-                alen = 0.01*(len(reply['a'])**2)
-            
-            infodiff = 0 if math.fabs(len(reply['a']) - len(query)) < 10 else math.fabs(len(reply['a']) - len(query)) 
-            ainc = inclusion(reply['a'],query) if inclusion(reply['a'],query) < 10 else 10
-            rtime = reply['t'].split('-')
-            #print(time)
-            try:
-                elapse = int(rtime[0]) + int(rtime[1])/12.0 + int(rtime[2])/366.0 - 2018
-            except ValueError:
-                elapse = 0
-            #print(elapse)
-            feature = [qbad,like,alen,infodiff,ainc,elapse]
-            
-            fitness = np.matmul(gene,feature)
-            fitnesses.append(fitness)
+#            feature = []
+#            qbad = qbadness(query,reply['q'])
+#            #print(reply['l'])
+#            like = int(reply['l'])
+#            
+#            if len(reply['a']) == 0:
+#                alen = 10000
+#            else: 
+#                alen = 0.01*(len(reply['a'])**2)
+#            
+#            infodiff = 0 if math.fabs(len(reply['a']) - len(query)) < 10 else math.fabs(len(reply['a']) - len(query)) 
+#            ainc = inclusion(reply['a'],query) if inclusion(reply['a'],query) < 10 else 10
+#            rtime = reply['t'].split('-')
+#            #print(time)
+#            try:
+#                elapse = int(rtime[0]) + int(rtime[1])/12.0 + int(rtime[2])/366.0 - 2018
+#            except ValueError:
+#                elapse = 0
+#            #print(elapse)
+#            feature = [qbad,like,alen,infodiff,ainc,elapse]
+#            
+#            fitness = np.matmul(gene,feature)
+            #fitnesses.append(fitness)
 
         try:
             maxFit = random.choice([fit for fit in fitnesses if fit >= np.percentile(fitnesses,75)])
