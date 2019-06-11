@@ -190,8 +190,8 @@ def reply(query, queryUrlPrefix=queryUrlPrefix, geneMean=geneMean):
         except ValueError:
             return "聊别的吧..."
             
-#answer = reply('pyqt如何学好？')
-#print(answer)
+answer = reply('厌氧工艺应注意事项')
+print(answer)
 
 
     
