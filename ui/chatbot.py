@@ -189,10 +189,10 @@ def reply(query, queryUrlPrefix=queryUrlPrefix, geneMean=geneMean):
             return replies[fitInd]['a']
         except ValueError:
             return "聊别的吧..."
-            
-answer = reply('厌氧工艺应注意事项')
-print(answer)
-
-
-    
+#            
+#answer = reply('厌氧工艺应注意事项')
+#print(answer)
+#
+#
+#    
 

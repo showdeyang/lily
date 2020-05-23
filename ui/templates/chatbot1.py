@@ -87,6 +87,8 @@ def getUrls(query):
     #print(urls)
     return u
 
+
+
 def f(query,answers):
     args = [(query, answer) for answer in answers]
     with Pool() as p:
@@ -109,8 +111,7 @@ def reply(query):
 
     return answers[fitInd]
     
-#answer = reply('杨晨晨sugar')
-#print(answer) 
+
 query = input('>>>')  
 while query != 'bye lily':
     answer = reply(query)

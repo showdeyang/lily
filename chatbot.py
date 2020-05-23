@@ -13,6 +13,15 @@ import jieba
 
 
 #session = FuturesSession(executor=ThreadPoolExecutor(max_workers=12))
+headers = {"Host": "zhidao.baidu.com",
+        "connection": "keep-alive",
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.94 Safari/537.36",
+        "accept": "*/*",
+        "accept-encoding": "gzip, deflate",
+        "accept-language": "zh-CN,zh;q=0.9",
+        "cache-control": "no-cache",
+        "Referer": "https://zhidao.baidu.com/usercenter?uid=a1eb4069236f25705e79634d"
+        }
 
 with open('./fitness.model','r') as f:
         model = f.read()
@@ -38,7 +47,7 @@ def _async_requests(urls):
     """
      
     session = FuturesSession(max_workers=12)
-    futures = [session.get(url) for url in urls]
+    futures = [session.get(url,headers=headers) for url in urls]
     return [future.result() for future in futures]
 
 def lenDiff(query,question):
@@ -80,13 +89,13 @@ def parallelScrape(queryUrls,questions):
 def reply(query, queryUrlPrefix=queryUrlPrefix, geneMean=geneMean):
     if query == 'bye lily':
         return "下次再聊！"
-    elif query is '':
+    elif query == '':
         return ""
     else:
         queryUrl = queryUrlPrefix + query
     
         #Get result urls
-        html = requests.get(queryUrl).content
+        html = requests.get(queryUrl, headers=headers).content
         soup = BeautifulSoup(html,"lxml")
         elems = soup.find("div",{"class":"list-inner"}).findAll("dt",{"class":"dt mb-4 line"})
         urls = [elem.a['href'] for elem in elems]
@@ -117,7 +126,7 @@ def reply(query, queryUrlPrefix=queryUrlPrefix, geneMean=geneMean):
         #gene = [np.random.normal(g,0) for g in geneMean]
         gene = geneMean
         # + g*random.random()
-        features=  []
+        #features=  []
         fitnesses = [] 
         for reply in replies:
             
@@ -156,8 +165,8 @@ def reply(query, queryUrlPrefix=queryUrlPrefix, geneMean=geneMean):
         except ValueError:
             return "聊别的吧..."
             
-#answer = reply('pyqt如何学好？')
-#print(answer)
+# answer = reply('pyqt如何学好？')
+# print(answer)
 
 
     
